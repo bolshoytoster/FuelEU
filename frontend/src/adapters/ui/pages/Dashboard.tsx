@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { createDataApi } from '@adapters/infrastructure/api/dataApi';
-import { DataSection } from '@adapters/ui/components/DataSection';
+import { Table } from '@adapters/ui/components/Table';
 import { useResource } from '@adapters/ui/hooks/useResource';
 import { ListBankEntriesUseCase } from '@core/application/listBankEntries';
 import { ComparisonUseCase } from '@core/application/comparison';
@@ -28,86 +28,35 @@ export const Dashboard = () => {
     {
       title: "Routes",
       description: "All reported routes with their GHG intensity.",
-      resource: routesResource,
-      columns: [
-        {
-          header: 'routeId',
-          render: route => (route as { routeId: string }).routeId
-        },
-        {
-          header: 'vesselType',
-          render: route => (route as { vesselType: string }).vesselType
-        },
-        {
-          header: 'fuelType',
-          render: route => (route as { fuelType: string }).fuelType
-        },
-        {
-          header: 'year',
-          render: route => (route as { year: number }).year
-        },
-        {
-          header: 'ghgIntensity (gCO₂e/MJ)',
-          render: route => formatNumber((route as { ghgIntensity: number }).ghgIntensity)
-        },
-        {
-          header: 'fuelConsumption (t)',
-          render: route => (route as { fuelConsumption: number }).fuelConsumption
-        },
-        {
-          header: 'distance (km)',
-          render: route => (route as { distance: number }).distance
-        },
-        {
-          header: 'totalEmissions (t)',
-          render: route => (route as { totalEmissions: number }).totalEmissions
-        }
-      ]
+      contents: (
+        <Table
+          resource={routesResource}
+          columns={{
+            'routeId': route => route.routeId,
+            'vesselType': route => route.vesselType,
+            'fuelType': route => route.fuelType,
+            'year': route => route.year,
+            'ghgIntensity (gCO₂e/MJ)': route => formatNumber(route.ghgIntensity),
+            'fuelConsumption (t)': route => route.fuelConsumption,
+            'distance (km)': route => route.distance,
+            'totalEmissions (t)': route => route.totalEmissions
+          }}
+        />
+      )
     },
     {
       title: "Compare",
-      resource: comparisonResource,
-      columns: [
-        {
-          header: 'routeId',
-          render: route => (route as { routeId: string }).routeId
-        },
-        {
-          header: 'ghgIntensity (gCO₂e/MJ)',
-          render: route => formatNumber((route as { ghgIntensity: number }).ghgIntensity)
-        },
-        {
-          header: '% difference',
-          render: route => formatNumber((route as { percentDiff: number }).percentDiff)
-        },
-        {
-          header: 'compliant',
-          render: route => (route as { compliant: boolean }).compliant ? '✅' : '❌'
-        }
-      ]
-    },
-    {
-      title: "Banking",
-      resource: bankingResource,
-      columns: [
-        {
-          header: 'Ship',
-          render: (entry) => (
-            <span className="font-medium text-slate-800">
-              {(entry as { shipId: string }).shipId}
-            </span>
-          )
-        },
-        {
-          header: 'Year',
-          render: (entry) => (entry as { year: number }).year
-        },
-        {
-          header: 'Amount (gCO₂e)',
-          render: (entry) =>
-            formatNumber((entry as { amountGco2eq: number }).amountGco2eq)
-        }
-      ]
+      contents: (
+        <Table
+          resource={comparisonResource}
+          columns={{
+            'routeId': route => route.routeId,
+            'ghgIntensity (gCO₂e/MJ)': route => formatNumber(route.ghgIntensity),
+            '% difference': route => formatNumber(route.percentDiff),
+            'compliant': route => route.compliant ? '✅' : '❌'
+          }}
+        />
+      )
     }
   ];
 
@@ -126,7 +75,10 @@ export const Dashboard = () => {
         ))}
       </div>
 
-      <DataSection data={tabData[currentTab]} />
+      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 space-y-4">
+        {tabData[currentTab].description}
+        {tabData[currentTab].contents}
+      </section>
     </main>
   );
 };
