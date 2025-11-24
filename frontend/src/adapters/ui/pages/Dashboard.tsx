@@ -92,27 +92,63 @@ export const Dashboard = () => {
     {
       title: "Compare",
       contents: (
-        <Table
-          resource={comparisonResource}
-          columns={[
-            {
-              header: "routeId",
-              render: route => route.routeId
-            },
-            {
-              header: "ghgIntensity (gCO₂e/MJ)",
-              render: route => formatNumber(route.ghgIntensity)
-            },
-            {
-              header: "% difference",
-              render: route => formatNumber(route.percentDiff)
-            },
-            {
-              header: "compliant",
-              render: route => route.compliant ? "✅" : "❌"
-            }
-          ]}
-        />
+        <div>
+          <Table
+            resource={comparisonResource}
+            columns={[
+              {
+                header: "routeId",
+                render: route => route.routeId
+              },
+              {
+                header: "ghgIntensity (gCO₂e/MJ)",
+                render: route => formatNumber(route.ghgIntensity)
+              },
+              {
+                header: "% difference",
+                render: route => formatNumber(route.percentDiff)
+              },
+              {
+                header: "compliant",
+                render: route => route.compliant ? "✅" : "❌"
+              }
+            ]}
+          />
+
+          <svg viewBox="0 0 512 512" className="m-16">
+            <text y="500">80</text>
+            <text y="256">90</text>
+            <text y="12">100</text>
+            <line x1="32" y1="6" x2="32" y2="500" stroke="black"></line>
+            <line x1="28" y1="496" x2="496" y2="496" stroke="black"></line>
+
+            {comparisonResource.data?.map((route, i) => {
+              const x = 64 + i * 460 / comparisonResource.data!.length;
+              const height = (route.ghgIntensity / 20 - 4) * 490;
+
+              return (
+                <g>
+                  <rect
+                    x={x}
+                    y={496 - height}
+                    width="32"
+                    height={height - 1}
+                    // This is a colour generation formula that I came up with for a previous project.
+                    // You can find a mostly-complete explanation through the following links:
+                    // https://bolshoy.ddns.net/files/colour_maths.jpg
+                    // https://www.desmos.com/calculator/o988gkndov
+                    fill={i
+                      ? "hsl(" + (180 + 360 * i) / (2 ** Math.floor(Math.log2(i))) + " 100 45)"
+                      : "hsl(0 100 45)"
+                    }
+                  ></rect>
+                  <rect></rect>
+                  <text x={x} y="512">{route.routeId}</text>
+                </g>
+              )
+            })}
+          </svg>
+        </div>
       )
     }
   ];
