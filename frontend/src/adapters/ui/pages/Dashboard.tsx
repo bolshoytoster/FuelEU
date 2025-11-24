@@ -69,8 +69,7 @@ export const Dashboard = () => {
       ]
     },
     {
-      title: "Compliance",
-      description: "Computed compliance balance per ship.",
+      title: "Compare",
       resource: complianceResource,
       columns: [
         {
@@ -94,7 +93,6 @@ export const Dashboard = () => {
     },
     {
       title: "Banking",
-      description: "Available surplus amounts per ship.",
       resource: bankingResource,
       columns: [
         {
@@ -118,19 +116,22 @@ export const Dashboard = () => {
     }
   ];
 
-  const [tab, setTab] = useState(0);
+  const [currentTab, setCurrentTab] = useState(0);
 
   return (
     <main className="mx-auto max-w-5xl gap-6 p-6">
       <div className="flex flex-row justify-evenly">
         {tabData.map((tab, index) => (
-          <button key={index} onClick={() => setTab(index)} className="rounded-2xl bg-white border p-4 m-4">
+          <button
+            key={index}
+            onClick={() => setCurrentTab(index)}
+            className={"rounded-2xl border p-4 m-4 " + (currentTab == index ? "bg-cyan-100" : "bg-white")}>
             {tab.title}
           </button>
         ))}
       </div>
 
-      <DataSection data={tabData[tab]} />
+      <DataSection data={tabData[currentTab]} />
     </main>
   );
 };

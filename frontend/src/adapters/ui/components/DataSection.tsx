@@ -6,7 +6,6 @@ type Column<T> = {
 };
 
 type Props<T> = {
-  title: string;
   description: string;
   columns: Column<T>[];
   resource: {
@@ -19,7 +18,6 @@ type Props<T> = {
 
 export const DataSection = <T,>({
   data: {
-    title,
     description,
     columns,
     resource
@@ -90,10 +88,7 @@ export const DataSection = <T,>({
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-        <p className="text-sm text-slate-500">{description}</p>
-      </div>
+      {description}
       {renderingState()}
     </section>
   );
