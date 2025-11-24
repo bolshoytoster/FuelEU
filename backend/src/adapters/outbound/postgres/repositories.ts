@@ -38,7 +38,6 @@ export class PostgresRoutesRepository implements RoutesRepository {
     const query = `
       SELECT id, route_id, year, ghg_intensity, is_baseline
       FROM routes
-      ORDER BY year DESC, route_id ASC
     `;
     const { rows } = await this.pool.query<RouteRow>(query);
     return rows.map((row) => ({
@@ -60,7 +59,6 @@ export class PostgresShipComplianceRepository
     const query = `
       SELECT id, ship_id, year, cb_gco2eq
       FROM ship_compliance
-      ORDER BY year DESC, ship_id ASC
     `;
     const { rows } = await this.pool.query<ShipComplianceRow>(query);
     return rows.map((row) => ({
@@ -81,7 +79,6 @@ export class PostgresBankEntriesRepository
     const query = `
       SELECT id, ship_id, year, amount_gco2eq
       FROM bank_entries
-      ORDER BY year DESC, ship_id ASC
     `;
     const { rows } = await this.pool.query<BankEntryRow>(query);
     return rows.map((row) => ({
