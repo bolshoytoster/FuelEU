@@ -8,8 +8,16 @@ To install dependencies, and build/run the backend, use:
 ```sh
 fueleu/backend$ npm i
 fueleu/backend$ npm run build
-fueleu/backend$ npm run start
+fueleu/backend$ node dist/index.js
 ```
+
+To run the frontend, use:
+```sh
+fueleu/frontend$ npm run dev
+```
+
+TODO: get an actual build to work
+
 
 ## Postgres
 You need a postgres server running and set up. You can find some info on setting up a docker container [here](https://postgres.guide/docs/getting-started).
