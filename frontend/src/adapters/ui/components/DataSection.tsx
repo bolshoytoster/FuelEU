@@ -18,11 +18,13 @@ type Props<T> = {
 };
 
 export const DataSection = <T,>({
-  title,
-  description,
-  columns,
-  resource
-}: Props<T>) => {
+  data: {
+    title,
+    description,
+    columns,
+    resource
+  }
+}: { data: Props<T> }) => {
   const renderingState = () => {
     if (resource.loading) {
       return (
