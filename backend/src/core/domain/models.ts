@@ -11,6 +11,13 @@ export interface Route {
   isBaseline: boolean;
 }
 
+export interface Comparison {
+  routeId: string;
+  ghgIntensity: number;
+  percentDiff: number;
+  compliant: boolean;
+};
+
 export interface ShipCompliance {
   id: number;
   shipId: string;

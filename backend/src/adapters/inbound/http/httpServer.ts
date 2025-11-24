@@ -1,10 +1,12 @@
 import express, { NextFunction, Request, Response } from 'express';
 import { ListBankEntriesService } from '../../../core/application/listBankEntriesService';
+import { ComparisonService } from '../../../core/application/comparisonService';
 import { ListComplianceService } from '../../../core/application/listComplianceService';
 import { ListRoutesService } from '../../../core/application/listRoutesService';
 
 export interface HttpServerDependencies {
   listRoutesService: ListRoutesService;
+  comparisonService: ComparisonService;
   listComplianceService: ListComplianceService;
   listBankEntriesService: ListBankEntriesService;
 }
@@ -21,6 +23,7 @@ const wrap =
 
 export const buildHttpServer = ({
   listRoutesService,
+  comparisonService,
   listComplianceService,
   listBankEntriesService
 }: HttpServerDependencies) => {
@@ -31,6 +34,14 @@ export const buildHttpServer = ({
     '/routes',
     wrap(async (_req, res) => {
       const routes = await listRoutesService.execute();
+      res.json(routes);
+    })
+  );
+
+  app.get(
+    '/routes/comparison',
+    wrap(async (_req, res) => {
+      const routes = await comparisonService.execute();
       res.json(routes);
     })
   );

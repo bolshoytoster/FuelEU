@@ -9,11 +9,16 @@ import { ListComplianceService } from '../../core/application/listComplianceServ
 import { ListRoutesService } from '../../core/application/listRoutesService';
 import { createPostgresPool } from '../db/postgresClient';
 import { serverConfig } from '../../shared/config';
+import { ComparisonService } from '../../core/application/comparisonService';
 
 export const startServer = async () => {
   const pool = createPostgresPool();
 
   const listRoutesService = new ListRoutesService(
+    new PostgresRoutesRepository(pool)
+  );
+
+  const comparisonService = new ComparisonService(
     new PostgresRoutesRepository(pool)
   );
 
@@ -27,6 +32,7 @@ export const startServer = async () => {
 
   const app = buildHttpServer({
     listRoutesService,
+    comparisonService,
     listComplianceService,
     listBankEntriesService
   });
