@@ -4,21 +4,21 @@ import { createDataApi } from '@adapters/infrastructure/api/dataApi';
 import { DataSection } from '@adapters/ui/components/DataSection';
 import { useResource } from '@adapters/ui/hooks/useResource';
 import { ListBankEntriesUseCase } from '@core/application/listBankEntries';
-import { ListComplianceUseCase } from '@core/application/listCompliance';
+import { ComparisonUseCase } from '@core/application/comparison';
 import { ListRoutesUseCase } from '@core/application/listRoutes';
 import { formatNumber } from '@shared/format';
 
 const dataApi = createDataApi();
 const listRoutesUseCase = new ListRoutesUseCase(dataApi);
-const listComplianceUseCase = new ListComplianceUseCase(dataApi);
+const comparisonUseCase = new ComparisonUseCase(dataApi);
 const listBankEntriesUseCase = new ListBankEntriesUseCase(dataApi);
 
 export const Dashboard = () => {
   const routesResource = useResource(
     listRoutesUseCase.execute.bind(listRoutesUseCase)
   );
-  const complianceResource = useResource(
-    listComplianceUseCase.execute.bind(listComplianceUseCase)
+  const comparisonResource = useResource(
+    comparisonUseCase.execute.bind(comparisonUseCase)
   );
   const bankingResource = useResource(
     listBankEntriesUseCase.execute.bind(listBankEntriesUseCase)
@@ -32,11 +32,7 @@ export const Dashboard = () => {
       columns: [
         {
           header: 'routeId',
-          render: route => (
-            <span className="font-medium text-slate-800">
-              {(route as { routeId: string }).routeId}
-            </span>
-          )
+          render: route => (route as { routeId: string }).routeId
         },
         {
           header: 'vesselType',
@@ -70,24 +66,23 @@ export const Dashboard = () => {
     },
     {
       title: "Compare",
-      resource: complianceResource,
+      resource: comparisonResource,
       columns: [
         {
-          header: 'Ship',
-          render: (record) => (
-            <span className="font-medium text-slate-800">
-              {(record as { shipId: string }).shipId}
-            </span>
-          )
+          header: 'routeId',
+          render: route => (route as { routeId: string }).routeId
         },
         {
-          header: 'Year',
-          render: (record) => (record as { year: number }).year
+          header: 'ghgIntensity (gCO₂e/MJ)',
+          render: route => formatNumber((route as { ghgIntensity: number }).ghgIntensity)
         },
         {
-          header: 'CB (gCO₂e)',
-          render: (record) =>
-            formatNumber((record as { cbGco2eq: number }).cbGco2eq)
+          header: '% difference',
+          render: route => formatNumber((route as { percentDiff: number }).percentDiff)
+        },
+        {
+          header: 'compliant',
+          render: route => (route as { compliant: boolean }).compliant ? '✅' : '❌'
         }
       ]
     },

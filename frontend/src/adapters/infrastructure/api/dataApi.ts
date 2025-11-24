@@ -1,5 +1,5 @@
 import { apiConfig } from '@shared/config';
-import { BankEntry, Route, ShipCompliance } from '@core/domain/models';
+import { BankEntry, Comparison, Route, ShipCompliance } from '@core/domain/models';
 import { DataApiPort } from '@core/ports/dataApi';
 
 const httpGet = async <T>(path: string): Promise<T> => {
@@ -16,6 +16,7 @@ const httpGet = async <T>(path: string): Promise<T> => {
 
 export const createDataApi = (): DataApiPort => ({
   getRoutes: () => httpGet<Route[]>('/routes'),
+  getComparison: () => httpGet<Comparison[]>('/routes/comparison'),
   getCompliance: () => httpGet<ShipCompliance[]>('/compliance'),
   getBankEntries: () => httpGet<BankEntry[]>('/banking')
 });

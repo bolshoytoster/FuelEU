@@ -6,6 +6,12 @@ export type Route = {
   isBaseline: boolean;
 };
 
+export type Comparison = {
+  ghgIntensity: number;
+  percentDiff: number;
+  compliant: boolean;
+};
+
 export type ShipCompliance = {
   id: number;
   shipId: string;
