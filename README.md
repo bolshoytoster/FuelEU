@@ -3,6 +3,7 @@ TODO
 
 
 # Setup & run instructions
+## Backend
 To install dependencies, and build/run the backend, use:
 
 ```sh
@@ -11,12 +12,24 @@ fueleu/backend$ npm run build
 fueleu/backend$ node dist/index.js
 ```
 
-To run the frontend, use:
+
+## Frontend
+To preview the frontend, use:
 ```sh
 fueleu/frontend$ npm run dev
 ```
 
-TODO: get an actual build to work
+To build the frontend, use:
+```sh
+fueleu/frontend$ npm run build
+```
+
+Then the compiled site will be under `fueleu/frontend/dist`, where you can serve them, for example, with python's built-in http server:
+```sh
+fueleu/frontend/dist$ python -m http.server
+```
+
+By default, the frontend will try to reach the backend on `http://localhost:3000`, which is the default for the backend. If you need to change this, use the environment variable `VITE_API_BASE_URL`.
 
 
 ## Postgres
