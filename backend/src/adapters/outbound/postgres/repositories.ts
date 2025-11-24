@@ -9,8 +9,14 @@ import {
 type RouteRow = {
   id: number;
   route_id: string;
+  // TODO: would these two be better as enums?
+  vessel_type: string;
+  fuel_type: string;
   year: number;
-  ghg_intensity: number | string;
+  ghg_intensity: number;
+  fuel_consumption: number;
+  distance: number;
+  total_emissions: number;
   is_baseline: boolean;
 };
 
@@ -18,33 +24,31 @@ type ShipComplianceRow = {
   id: number;
   ship_id: string;
   year: number;
-  cb_gco2eq: number | string;
+  cb_gco2eq: number;
 };
 
 type BankEntryRow = {
   id: number;
   ship_id: string;
   year: number;
-  amount_gco2eq: number | string;
+  amount_gco2eq: number;
 };
-
-const toNumber = (value: number | string): number =>
-  typeof value === 'number' ? value : Number(value);
 
 export class PostgresRoutesRepository implements RoutesRepository {
   constructor(private readonly pool: Pool) {}
 
   async listRoutes(): Promise<Route[]> {
-    const query = `
-      SELECT id, route_id, year, ghg_intensity, is_baseline
-      FROM routes
-    `;
-    const { rows } = await this.pool.query<RouteRow>(query);
+    const { rows } = await this.pool.query<RouteRow>(`SELECT * FROM routes`);
     return rows.map((row) => ({
       id: row.id,
       routeId: row.route_id,
+      vesselType: row.vessel_type,
+      fuelType: row.fuel_type,
       year: row.year,
-      ghgIntensity: toNumber(row.ghg_intensity),
+      ghgIntensity: row.ghg_intensity,
+      fuelConsumption: row.fuel_consumption,
+      distance: row.distance,
+      totalEmissions: row.total_emissions,
       isBaseline: row.is_baseline
     }));
   }
@@ -65,7 +69,7 @@ export class PostgresShipComplianceRepository
       id: row.id,
       shipId: row.ship_id,
       year: row.year,
-      cbGco2eq: toNumber(row.cb_gco2eq)
+      cbGco2eq: row.cb_gco2eq
     }));
   }
 }
@@ -85,7 +89,7 @@ export class PostgresBankEntriesRepository
       id: row.id,
       shipId: row.ship_id,
       year: row.year,
-      amountGco2eq: toNumber(row.amount_gco2eq)
+      amountGco2eq: row.amount_gco2eq
     }));
   }
 }

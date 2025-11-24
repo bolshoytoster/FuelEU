@@ -6,7 +6,7 @@ import { useResource } from '@adapters/ui/hooks/useResource';
 import { ListBankEntriesUseCase } from '@core/application/listBankEntries';
 import { ListComplianceUseCase } from '@core/application/listCompliance';
 import { ListRoutesUseCase } from '@core/application/listRoutes';
-import { formatNumber, formatYear } from '@shared/format';
+import { formatNumber } from '@shared/format';
 
 const dataApi = createDataApi();
 const listRoutesUseCase = new ListRoutesUseCase(dataApi);
@@ -31,7 +31,7 @@ export const Dashboard = () => {
       resource: routesResource,
       columns: [
         {
-          header: 'Route',
+          header: 'routeId',
           render: route => (
             <span className="font-medium text-slate-800">
               {(route as { routeId: string }).routeId}
@@ -39,26 +39,32 @@ export const Dashboard = () => {
           )
         },
         {
-          header: 'Year',
-          render: (route) => formatYear((route as { year: number }).year)
+          header: 'vesselType',
+          render: route => (route as { vesselType: string }).vesselType
         },
         {
-          header: 'GHG intensity',
-          render: (route) =>
-            `${formatNumber((route as { ghgIntensity: number }).ghgIntensity)} gCO₂e`
+          header: 'fuelType',
+          render: route => (route as { fuelType: string }).fuelType
         },
         {
-          header: 'Baseline',
-          render: (route) =>
-            (route as { isBaseline: boolean }).isBaseline ? (
-              <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
-                Baseline
-              </span>
-            ) : (
-              <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
-                Observed
-              </span>
-            )
+          header: 'year',
+          render: route => (route as { year: number }).year
+        },
+        {
+          header: 'ghgIntensity (gCO₂e/MJ)',
+          render: route => formatNumber((route as { ghgIntensity: number }).ghgIntensity)
+        },
+        {
+          header: 'fuelConsumption (t)',
+          render: route => (route as { fuelConsumption: number }).fuelConsumption
+        },
+        {
+          header: 'distance (km)',
+          render: route => (route as { distance: number }).distance
+        },
+        {
+          header: 'totalEmissions (t)',
+          render: route => (route as { totalEmissions: number }).totalEmissions
         }
       ]
     },
@@ -77,7 +83,7 @@ export const Dashboard = () => {
         },
         {
           header: 'Year',
-          render: (record) => formatYear((record as { year: number }).year)
+          render: (record) => (record as { year: number }).year
         },
         {
           header: 'CB (gCO₂e)',
@@ -101,7 +107,7 @@ export const Dashboard = () => {
         },
         {
           header: 'Year',
-          render: (entry) => formatYear((entry as { year: number }).year)
+          render: (entry) => (entry as { year: number }).year
         },
         {
           header: 'Amount (gCO₂e)',
@@ -118,7 +124,7 @@ export const Dashboard = () => {
     <main className="mx-auto max-w-5xl gap-6 p-6">
       <div className="flex flex-row justify-evenly">
         {tabData.map((tab, index) => (
-          <button onClick={() => setTab(index)} className="rounded-2xl bg-white border p-4 m-4">
+          <button key={index} onClick={() => setTab(index)} className="rounded-2xl bg-white border p-4 m-4">
             {tab.title}
           </button>
         ))}
