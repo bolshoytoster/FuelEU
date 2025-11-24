@@ -11,7 +11,7 @@ type Props<T> = {
 };
 
 export const Table = <T,>({columns, resource}: Props<T>) => {
-  if (resource.loading) {
+  if (!resource.data) {
     return (
       <p className="text-sm text-slate-500 animate-pulse">
         Loading latest data…
@@ -34,13 +34,13 @@ export const Table = <T,>({columns, resource}: Props<T>) => {
     );
   }
 
-  if (!resource.data || resource.data.length === 0) {
+  if (resource.data.length === 0) {
     return <p className="text-sm text-slate-500">No records yet.</p>;
   }
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-slate-200">
+      <table className={"min-w-full divide-y" + (resource.loading ? " animate-pulse" : "")}>
         <thead>
           <tr>
             {Object.keys(columns).map(header => (

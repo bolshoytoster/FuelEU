@@ -39,7 +39,23 @@ export const Dashboard = () => {
             'ghgIntensity (gCO₂e/MJ)': route => formatNumber(route.ghgIntensity),
             'fuelConsumption (t)': route => route.fuelConsumption,
             'distance (km)': route => route.distance,
-            'totalEmissions (t)': route => route.totalEmissions
+            'totalEmissions (t)': route => route.totalEmissions,
+            // The 'Set Baseline' buttons
+            '': route => route.isBaseline ? "Baseline" : (
+              <button
+                onClick={
+                  // When a button is clicked, set this route as the baseline,
+                  // then refresh data for this and the comparison page
+                  () => dataApi.setBaseline(route.routeId).then(() => {
+                    routesResource.refresh();
+                    comparisonResource.refresh();
+                  })
+                }
+                className="rounded-2xl border bg-white p-3"
+              >
+                Set Baseline
+              </button>
+            )
           }}
         />
       )
@@ -75,7 +91,7 @@ export const Dashboard = () => {
         ))}
       </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 space-y-4">
+      <section className="rounded-2xl border bg-white p-6 space-y-4">
         {tabData[currentTab].description}
         {tabData[currentTab].contents}
       </section>
