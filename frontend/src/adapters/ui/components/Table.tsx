@@ -1,7 +1,19 @@
-import type { ReactNode } from 'react';
+import { Dispatch, SetStateAction, type ReactNode } from 'react';
+
+type FilteredColumn<T> = {
+  header: string;
+  render: (row: T) => string;
+  // Optional `useState()` if this column should be filterable
+  filter: [string, Dispatch<SetStateAction<string>>]
+};
 
 type Props<T> = {
-  columns: { [header: string]: (row: T) => ReactNode };
+  columns: (
+    {
+      header: string;
+      render: (row: T) => ReactNode
+    } | FilteredColumn<T>
+  )[];
   resource: {
     data?: T[];
     loading: boolean;
@@ -38,35 +50,55 @@ export const Table = <T,>({columns, resource}: Props<T>) => {
     return <p className="text-sm text-slate-500">No records yet.</p>;
   }
 
+  // Get all of the columns that have filters that aren't empty
+  const active_filters = columns.filter(column => "filter" in column && column.filter[0]) as FilteredColumn<T>[];
+
   return (
     <div className="overflow-x-auto">
       <table className={"min-w-full divide-y" + (resource.loading ? " animate-pulse" : "")}>
         <thead>
           <tr>
-            {Object.keys(columns).map(header => (
+            {columns.map(column => (
               <th
-                key={header}
+                key={column.header}
                 scope="col"
                 className="px-3 py-2 text-left text-sm font-semibold text-slate-700"
               >
-                {header}
+                {column.header}
+                {
+                  "filter" in column
+                    ? <input
+                      className="border"
+                      placeholder="filter"
+                      value={column.filter[0]}
+                      onChange={event => column.filter[1](event.target.value)}
+                    />
+                    : ""
+                }
               </th>
             ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100 bg-white">
-          {resource.data.map((row, index) => (
-            <tr key={index}>
-              {Object.entries(columns).map(([header, render]) => (
-                <td
-                  key={header}
-                  className="px-3 py-2 text-sm text-slate-600"
-                >
-                  {render(row)}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {resource.data.filter(
+            // Filter the rows for only the ones that match all of the filters
+            row => active_filters.every(
+              column => column.render(row).toLowerCase().includes(column.filter[0].toLowerCase())
+            )
+          ).map(
+            (row, index) => (
+              <tr key={index}>
+                {columns.map(column => (
+                  <td
+                    key={column.header}
+                    className="px-3 py-2 text-sm text-slate-600"
+                  >
+                    {column.render(row)}
+                  </td>
+                ))}
+              </tr>
+            )
+          )}
         </tbody>
       </table>
     </div>

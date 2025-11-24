@@ -31,32 +31,61 @@ export const Dashboard = () => {
       contents: (
         <Table
           resource={routesResource}
-          columns={{
-            'routeId': route => route.routeId,
-            'vesselType': route => route.vesselType,
-            'fuelType': route => route.fuelType,
-            'year': route => route.year,
-            'ghgIntensity (gCO₂e/MJ)': route => formatNumber(route.ghgIntensity),
-            'fuelConsumption (t)': route => route.fuelConsumption,
-            'distance (km)': route => route.distance,
-            'totalEmissions (t)': route => route.totalEmissions,
-            // The 'Set Baseline' buttons
-            '': route => route.isBaseline ? "Baseline" : (
-              <button
-                onClick={
-                  // When a button is clicked, set this route as the baseline,
-                  // then refresh data for this and the comparison page
-                  () => dataApi.setBaseline(route.routeId).then(() => {
-                    routesResource.refresh();
-                    comparisonResource.refresh();
-                  })
-                }
-                className="rounded-2xl border bg-white p-3"
-              >
-                Set Baseline
-              </button>
-            )
-          }}
+          columns={[
+            {
+              header: "routeId",
+              render: route => route.routeId
+            },
+            {
+              header: "vesselType",
+              render: route => route.vesselType,
+              filter: useState(""),
+            },
+            {
+              header: "fuelType",
+              render: route => route.fuelType,
+              filter: useState(""),
+            },
+            {
+              header: "year",
+              render: route => "" + route.year,
+              filter: useState(""),
+            },
+            {
+              header: "ghgIntensity (gCO₂e/MJ)",
+              render: route => route.ghgIntensity
+            },
+            {
+              header: "fuelConsumption (t)",
+              render: route => route.fuelConsumption
+            },
+            {
+              header: "distance (km)",
+              render: route => route.distance
+            },
+            {
+              header: "totalEmissions (t)",
+              render: route => route.totalEmissions
+            },
+            {
+              header: "",
+              render: route => route.isBaseline ? "Baseline" : (
+                <button
+                  onClick={
+                    // When a button is clicked, set this route as the baseline,
+                    // then refresh data for this and the comparison page
+                    () => dataApi.setBaseline(route.routeId).then(() => {
+                      routesResource.refresh();
+                      comparisonResource.refresh();
+                    })
+                  }
+                  className="rounded-2xl border bg-white p-3"
+                >
+                  Set Baseline
+                </button>
+              )
+            }
+          ]}
         />
       )
     },
@@ -65,12 +94,24 @@ export const Dashboard = () => {
       contents: (
         <Table
           resource={comparisonResource}
-          columns={{
-            'routeId': route => route.routeId,
-            'ghgIntensity (gCO₂e/MJ)': route => formatNumber(route.ghgIntensity),
-            '% difference': route => formatNumber(route.percentDiff),
-            'compliant': route => route.compliant ? '✅' : '❌'
-          }}
+          columns={[
+            {
+              header: "routeId",
+              render: route => route.routeId
+            },
+            {
+              header: "ghgIntensity (gCO₂e/MJ)",
+              render: route => formatNumber(route.ghgIntensity)
+            },
+            {
+              header: "% difference",
+              render: route => formatNumber(route.percentDiff)
+            },
+            {
+              header: "compliant",
+              render: route => route.compliant ? "✅" : "❌"
+            }
+          ]}
         />
       )
     }
