@@ -38,7 +38,7 @@ export class PostgresRoutesRepository implements RoutesRepository {
   constructor(private readonly pool: Pool) {}
 
   async listRoutes(): Promise<Route[]> {
-    const { rows } = await this.pool.query<RouteRow>(`SELECT * FROM routes`);
+    const { rows } = await this.pool.query<RouteRow>(`SELECT * FROM routes ORDER BY id`);
     return rows.map((row) => ({
       id: row.id,
       routeId: row.route_id,
@@ -51,6 +51,18 @@ export class PostgresRoutesRepository implements RoutesRepository {
       totalEmissions: row.total_emissions,
       isBaseline: row.is_baseline
     }));
+  }
+
+  async setBaseline(routeId: string): Promise<undefined> {
+    const client = await this.pool.connect();
+
+    // Atomically change the baseline route
+    await client.query('BEGIN');
+    await client.query('UPDATE routes SET is_baseline = FALSE WHERE is_baseline');
+    await client.query('UPDATE routes SET is_baseline = TRUE WHERE route_id = $1', [routeId]);
+    await client.query('COMMIT');
+
+    client.release();
   }
 }
 

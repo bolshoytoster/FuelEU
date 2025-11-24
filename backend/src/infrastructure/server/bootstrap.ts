@@ -4,17 +4,22 @@ import {
   PostgresRoutesRepository,
   PostgresShipComplianceRepository
 } from '../../adapters/outbound/postgres/repositories';
+import { ComparisonService } from '../../core/application/comparisonService';
 import { ListBankEntriesService } from '../../core/application/listBankEntriesService';
 import { ListComplianceService } from '../../core/application/listComplianceService';
 import { ListRoutesService } from '../../core/application/listRoutesService';
+import { SetBaselineService } from '../../core/application/setBaselineService';
 import { createPostgresPool } from '../db/postgresClient';
 import { serverConfig } from '../../shared/config';
-import { ComparisonService } from '../../core/application/comparisonService';
 
 export const startServer = async () => {
   const pool = createPostgresPool();
 
   const listRoutesService = new ListRoutesService(
+    new PostgresRoutesRepository(pool)
+  );
+
+  const setBaselineService = new SetBaselineService(
     new PostgresRoutesRepository(pool)
   );
 
@@ -32,6 +37,7 @@ export const startServer = async () => {
 
   const app = buildHttpServer({
     listRoutesService,
+    setBaselineService,
     comparisonService,
     listComplianceService,
     listBankEntriesService

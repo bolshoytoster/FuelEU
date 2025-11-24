@@ -1,11 +1,13 @@
 import express, { NextFunction, Request, Response } from 'express';
-import { ListBankEntriesService } from '../../../core/application/listBankEntriesService';
 import { ComparisonService } from '../../../core/application/comparisonService';
+import { ListBankEntriesService } from '../../../core/application/listBankEntriesService';
 import { ListComplianceService } from '../../../core/application/listComplianceService';
 import { ListRoutesService } from '../../../core/application/listRoutesService';
+import { SetBaselineService } from '../../../core/application/setBaselineService';
 
 export interface HttpServerDependencies {
   listRoutesService: ListRoutesService;
+  setBaselineService: SetBaselineService;
   comparisonService: ComparisonService;
   listComplianceService: ListComplianceService;
   listBankEntriesService: ListBankEntriesService;
@@ -23,6 +25,7 @@ const wrap =
 
 export const buildHttpServer = ({
   listRoutesService,
+  setBaselineService,
   comparisonService,
   listComplianceService,
   listBankEntriesService
@@ -35,6 +38,14 @@ export const buildHttpServer = ({
     wrap(async (_req, res) => {
       const routes = await listRoutesService.execute();
       res.json(routes);
+    })
+  );
+
+  app.post(
+    '/routes/:routeId/baseline',
+    wrap(async (req, res) => {
+      await setBaselineService.execute(req.params.routeId);
+      res.sendStatus(200);
     })
   );
 
