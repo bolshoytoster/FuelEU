@@ -1,7 +1,3 @@
-# Overview
-TODO
-
-
 # Setup & run instructions
 ## Backend
 To install dependencies, and build/run the backend, use:
@@ -88,12 +84,12 @@ fueleu=# CREATE TABLE bank_entries (
     amount_gco2eq REAL
 );
 fueleu=# CREATE TABLE pools (
-    id INTEGER PRIMARY KEY,
+    id SMALLSERIAL PRIMARY KEY,
     year INTEGER,
     created_at TIMESTAMP
 );
 fueleu=# CREATE TABLE pool_members (
-    pool_id INTEGER REFERENCES pools (id),
+    pool_id SMALLSERIAL REFERENCES pools (id),
     ship_id TEXT,
     cb_before REAL,
     cb_after REAL
