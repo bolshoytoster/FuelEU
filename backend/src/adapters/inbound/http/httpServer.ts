@@ -1,4 +1,6 @@
 import express, { NextFunction, Request, Response } from 'express';
+import { ApplyBankedSurplusService } from '../../../core/application/applyBankedSurplusService';
+import { BankSurplusService } from '../../../core/application/bankSurplusService';
 import { ComparisonService } from '../../../core/application/comparisonService';
 import { GetComplianceBalanceService } from '../../../core/application/getComplianceBalanceService';
 import { ListBankEntriesService } from '../../../core/application/listBankEntriesService';
@@ -11,6 +13,8 @@ export interface HttpServerDependencies {
   comparisonService: ComparisonService;
   getComplianceBalanceService: GetComplianceBalanceService;
   listBankEntriesService: ListBankEntriesService;
+  bankSurplusService: BankSurplusService;
+  applyBankedSurplusService: ApplyBankedSurplusService;
 }
 
 type AsyncHandler = (
@@ -28,10 +32,13 @@ export const buildHttpServer = ({
   setBaselineService,
   comparisonService,
   getComplianceBalanceService,
-  listBankEntriesService
+  listBankEntriesService,
+  bankSurplusService,
+  applyBankedSurplusService
 }: HttpServerDependencies) => {
   const app = express();
   app.disable('x-powered-by');
+  app.use(express.json());
 
   app.get(
     '/routes',
@@ -76,6 +83,44 @@ export const buildHttpServer = ({
     wrap(async (_req, res) => {
       const entries = await listBankEntriesService.execute();
       res.json(entries);
+    })
+  );
+
+  app.post(
+    '/banking/bank',
+    wrap(async (req, res) => {
+      const { shipId, year } = req.body ?? {};
+      if (typeof shipId !== 'string' || typeof year !== 'string') {
+        res.sendStatus(400);
+        return;
+      }
+
+      const result = await bankSurplusService.execute(shipId, year);
+      if (!result) {
+        res.sendStatus(404);
+        return;
+      }
+
+      res.json(result);
+    })
+  );
+
+  app.post(
+    '/banking/apply',
+    wrap(async (req, res) => {
+      const { shipId, year } = req.body ?? {};
+      if (typeof shipId !== 'string' || typeof year !== 'string') {
+        res.sendStatus(400);
+        return;
+      }
+
+      const result = await applyBankedSurplusService.execute(shipId, year);
+      if (!result) {
+        res.sendStatus(404);
+        return;
+      }
+
+      res.json(result);
     })
   );
 

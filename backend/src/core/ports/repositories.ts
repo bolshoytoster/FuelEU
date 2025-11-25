@@ -7,6 +7,8 @@ export interface RoutesRepository {
 
 export interface BankingRepository {
   getComplianceBalance(shipId: string, year: string): Promise<ComplianceBalance | undefined>;
+  bankSurplus(shipId: string, year: string): Promise<ComplianceBalance | undefined>;
+  applyBankedSurplus(shipId: string, year: string): Promise<ComplianceBalance | undefined>;
 }
 
 export interface BankEntriesRepository {

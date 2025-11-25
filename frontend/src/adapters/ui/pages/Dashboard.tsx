@@ -31,6 +31,7 @@ export const Dashboard = () => {
     error?: string;
     status: 'idle' | 'loading' | 'success' | 'error';
   }>({ status: 'idle' });
+  const [bankingAction, setBankingAction] = useState<'bank' | 'apply'>();
 
   const selectableRoutes = new Set<string>();
   const selectableYears = new Set<number>();
@@ -80,6 +81,44 @@ export const Dashboard = () => {
       cancelled = true;
     };
   }, [selectedRoute, selectedYear]);
+
+  const handleBankingAction = async (action: 'bank' | 'apply') => {
+    if (!selectedRoute || !selectedYear)
+      return;
+
+    setBankingAction(action);
+    setBankRecordState((prev) => ({
+      ...prev,
+      error: undefined,
+      status: 'loading'
+    }));
+
+    try {
+      const nextRecord = action === 'bank'
+        ? await dataApi.bankSurplus(selectedRoute, selectedYear)
+        : await dataApi.applyBankedSurplus(selectedRoute, selectedYear);
+
+      if (nextRecord) {
+        setBankRecordState({
+          data: nextRecord,
+          status: 'success'
+        });
+      } else {
+        const refreshedRecord = await getBankRecordUseCase.execute(selectedRoute, selectedYear);
+        setBankRecordState({
+          data: refreshedRecord,
+          status: 'success'
+        });
+      }
+    } catch (error) {
+      setBankRecordState({
+        error: (error as Error).message,
+        status: 'error'
+      });
+    } finally {
+      setBankingAction(undefined);
+    }
+  };
 
 
   const tabData = [
@@ -215,14 +254,14 @@ export const Dashboard = () => {
           Ship: <select value={selectedRoute} onChange={e => setSelectedRoute(e.target.value)}>
             <option value=""></option>
             {[...selectableRoutes].map(routeId => (
-              <option value={routeId}>{routeId}</option>
+              <option key={routeId} value={routeId}>{routeId}</option>
             ))}
           </select>
           <br/>
           Year: <select value={selectedYear} onChange={e => setSelectedYear(e.target.value)}>
             <option value=""></option>
             {[...selectableYears].map(year => (
-              <option value={year}>{year}</option>
+              <option key={year} value={year}>{year}</option>
             ))}
           </select>
           <br/>
@@ -243,15 +282,19 @@ export const Dashboard = () => {
                   Current Compliance Balance (CB): {formatNumber(bankRecordState.data.balance)}
                   {0 < bankRecordState.data.balance ? (
                     <button
-                      className="rounded-2xl border p-4 m-4 bg-white"
+                      className="rounded-2xl border p-4 m-4 bg-white disabled:opacity-50"
+                      disabled={bankingAction === 'bank'}
+                      onClick={() => handleBankingAction('bank')}
                     >
-                      Bank Surplus
+                      {bankingAction === 'bank' ? 'Banking…' : 'Bank Surplus'}
                     </button>
                   ) : (
                     <button
-                      className="rounded-2xl border p-4 m-4 bg-white"
+                      className="rounded-2xl border p-4 m-4 bg-white disabled:opacity-50"
+                      disabled={bankingAction === 'apply'}
+                      onClick={() => handleBankingAction('apply')}
                     >
-                      Apply Banked Surplus
+                      {bankingAction === 'apply' ? 'Applying…' : 'Apply Banked Surplus'}
                     </button>
                   )}
                 </>

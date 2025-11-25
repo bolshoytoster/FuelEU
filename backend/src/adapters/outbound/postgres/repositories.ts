@@ -107,6 +107,88 @@ export class PostgresBankingRepository
       client.release();
     }
   }
+
+  async bankSurplus(shipId: string, year: string): Promise<ComplianceBalance | undefined> {
+    const compliance = await this.getComplianceBalance(shipId, year);
+    if (!compliance)
+      return;
+    if (compliance.balance <= 0)
+      return compliance;
+
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        `INSERT INTO bank_entries (ship_id, year, amount_gco2eq)
+        VALUES ($1, $2, $3)`,
+        [shipId, year, compliance.balance]
+      );
+      await client.query(
+        `UPDATE ship_compliance
+        SET cb_gco2eq = 0
+        WHERE ship_id = $1 AND year = $2`,
+        [shipId, year]
+      );
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+    return { balance: 0 };
+  }
+
+  async applyBankedSurplus(shipId: string, year: string): Promise<ComplianceBalance | undefined> {
+    const client = await this.pool.connect();
+
+    try {
+      await client.query('BEGIN');
+      const { rows } = await client.query<{ total: string }>(
+        `SELECT COALESCE(SUM(amount_gco2eq), 0) AS total
+        FROM bank_entries
+        WHERE ship_id = $1 AND year = $2`,
+        [shipId, year]
+      );
+
+      const total = Number(rows[0]?.total ?? 0);
+      if (total <= 0) {
+        await client.query('ROLLBACK');
+        return this.getComplianceBalance(shipId, year);
+      }
+
+      const { rowCount } = await client.query(
+        `UPDATE ship_compliance
+        SET cb_gco2eq = cb_gco2eq + $3
+        WHERE ship_id = $1 AND year = $2`,
+        [shipId, year, total]
+      );
+
+      if (!rowCount) {
+        await client.query(
+          `INSERT INTO ship_compliance (ship_id, year, cb_gco2eq)
+          VALUES ($1, $2, $3)`,
+          [shipId, year, total]
+        );
+      }
+
+      await client.query(
+        `DELETE FROM bank_entries
+        WHERE ship_id = $1 AND year = $2`,
+        [shipId, year]
+      );
+
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+    return this.getComplianceBalance(shipId, year);
+  }
 }
 
 export class PostgresBankEntriesRepository

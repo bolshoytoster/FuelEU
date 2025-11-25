@@ -4,9 +4,11 @@ import {
   PostgresBankingRepository,
   PostgresRoutesRepository,
 } from '../../adapters/outbound/postgres/repositories';
+import { ApplyBankedSurplusService } from '../../core/application/applyBankedSurplusService';
+import { BankSurplusService } from '../../core/application/bankSurplusService';
 import { ComparisonService } from '../../core/application/comparisonService';
-import { ListBankEntriesService } from '../../core/application/listBankEntriesService';
 import { GetComplianceBalanceService } from '../../core/application/getComplianceBalanceService';
+import { ListBankEntriesService } from '../../core/application/listBankEntriesService';
 import { ListRoutesService } from '../../core/application/listRoutesService';
 import { SetBaselineService } from '../../core/application/setBaselineService';
 import { createPostgresPool } from '../db/postgresClient';
@@ -15,20 +17,25 @@ import { serverConfig } from '../../shared/config';
 export const startServer = async () => {
   const pool = createPostgresPool();
 
-  const listRoutesService = new ListRoutesService(
-    new PostgresRoutesRepository(pool)
-  );
+  const routesRepository = new PostgresRoutesRepository(pool);
+  const bankingRepository = new PostgresBankingRepository(pool);
 
-  const setBaselineService = new SetBaselineService(
-    new PostgresRoutesRepository(pool)
-  );
+  const listRoutesService = new ListRoutesService(routesRepository);
 
-  const comparisonService = new ComparisonService(
-    new PostgresRoutesRepository(pool)
-  );
+  const setBaselineService = new SetBaselineService(routesRepository);
+
+  const comparisonService = new ComparisonService(routesRepository);
 
   const getComplianceBalanceService = new GetComplianceBalanceService(
-    new PostgresBankingRepository(pool)
+    bankingRepository
+  );
+
+  const bankSurplusService = new BankSurplusService(
+    bankingRepository
+  );
+
+  const applyBankedSurplusService = new ApplyBankedSurplusService(
+    bankingRepository
   );
 
   const listBankEntriesService = new ListBankEntriesService(
@@ -40,7 +47,9 @@ export const startServer = async () => {
     setBaselineService,
     comparisonService,
     getComplianceBalanceService,
-    listBankEntriesService
+    listBankEntriesService,
+    bankSurplusService,
+    applyBankedSurplusService
   });
 
   return new Promise<void>((resolve, reject) => {
