@@ -1,17 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { createDataApi } from '@adapters/infrastructure/api/dataApi';
 import { Table } from '@adapters/ui/components/Table';
 import { useResource } from '@adapters/ui/hooks/useResource';
-import { ListBankEntriesUseCase } from '@core/application/listBankEntries';
 import { ComparisonUseCase } from '@core/application/comparison';
 import { ListRoutesUseCase } from '@core/application/listRoutes';
+import { GetBankRecordUseCase } from '@core/application/getBankRecord';
+import { BankRecord } from '@core/domain/models';
 import { formatNumber } from '@shared/format';
 
 const dataApi = createDataApi();
 const listRoutesUseCase = new ListRoutesUseCase(dataApi);
 const comparisonUseCase = new ComparisonUseCase(dataApi);
-const listBankEntriesUseCase = new ListBankEntriesUseCase(dataApi);
+const getBankRecordUseCase = new GetBankRecordUseCase(dataApi);
 
 export const Dashboard = () => {
   const routesResource = useResource(
@@ -20,14 +21,70 @@ export const Dashboard = () => {
   const comparisonResource = useResource(
     comparisonUseCase.execute.bind(comparisonUseCase)
   );
-  const bankingResource = useResource(
-    listBankEntriesUseCase.execute.bind(listBankEntriesUseCase)
-  );
+
+
+  // The route/year selected in the banking tab
+  const [selectedRoute, setSelectedRoute] = useState("");
+  const [selectedYear, setSelectedYear] = useState("");
+  const [bankRecordState, setBankRecordState] = useState<{
+    data?: BankRecord;
+    error?: string;
+    status: 'idle' | 'loading' | 'success' | 'error';
+  }>({ status: 'idle' });
+
+  const selectableRoutes = new Set<string>();
+  const selectableYears = new Set<number>();
+
+  if (routesResource.data)
+    for (const route of routesResource.data) {
+      if (!selectedYear || route.year == +selectedYear)
+        selectableRoutes.add(route.routeId);
+      if (!selectedRoute || route.routeId == selectedRoute)
+        selectableYears.add(route.year);
+    }
+
+  useEffect(() => {
+    if (!selectedRoute || !selectedYear) {
+      setBankRecordState({ status: 'idle' });
+      return;
+    }
+
+    let cancelled = false;
+
+    setBankRecordState((prev) => ({
+      ...prev,
+      error: undefined,
+      status: 'loading'
+    }));
+
+    getBankRecordUseCase
+      .execute(selectedRoute, selectedYear)
+      .then((record) => {
+        if (cancelled)
+          return;
+        setBankRecordState({
+          data: record,
+          status: 'success'
+        });
+      })
+      .catch((error: Error) => {
+        if (cancelled)
+          return;
+        setBankRecordState({
+          error: error.message,
+          status: 'error'
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedRoute, selectedYear]);
+
 
   const tabData = [
     {
       title: "Routes",
-      description: "All reported routes with their GHG intensity.",
       contents: (
         <Table
           resource={routesResource}
@@ -92,7 +149,7 @@ export const Dashboard = () => {
     {
       title: "Compare",
       contents: (
-        <div>
+        <>
           <Table
             resource={comparisonResource}
             columns={[
@@ -148,7 +205,63 @@ export const Dashboard = () => {
               )
             })}
           </svg>
-        </div>
+        </>
+      )
+    },
+    {
+      title: "Banking",
+      contents: (
+        <>
+          Ship: <select value={selectedRoute} onChange={e => setSelectedRoute(e.target.value)}>
+            <option value=""></option>
+            {[...selectableRoutes].map(routeId => (
+              <option value={routeId}>{routeId}</option>
+            ))}
+          </select>
+          <br/>
+          Year: <select value={selectedYear} onChange={e => setSelectedYear(e.target.value)}>
+            <option value=""></option>
+            {[...selectableYears].map(year => (
+              <option value={year}>{year}</option>
+            ))}
+          </select>
+          <br/>
+          <br/>
+
+          {selectedRoute && selectedYear && (
+            <>
+              {bankRecordState.status === 'loading' && (
+                <p>Loading banking record...</p>
+              )}
+              {bankRecordState.status === 'error' && (
+                <p className="text-red-600">
+                  Failed to load banking record: {bankRecordState.error}
+                </p>
+              )}
+              {bankRecordState.status === 'success' && bankRecordState.data && (
+                <>
+                  Current Compliance Balance (CB): {formatNumber(bankRecordState.data.balance)}
+                  {0 < bankRecordState.data.balance ? (
+                    <button
+                      className="rounded-2xl border p-4 m-4 bg-white"
+                    >
+                      Bank Surplus
+                    </button>
+                  ) : (
+                    <button
+                      className="rounded-2xl border p-4 m-4 bg-white"
+                    >
+                      Apply Banked Surplus
+                    </button>
+                  )}
+                </>
+              )}
+              {bankRecordState.status === 'success' && !bankRecordState.data && (
+                <p>No banking record available for this selection.</p>
+              )}
+            </>
+          )}
+        </>
       )
     }
   ];
@@ -169,7 +282,6 @@ export const Dashboard = () => {
       </div>
 
       <section className="rounded-2xl border bg-white p-6 space-y-4">
-        {tabData[currentTab].description}
         {tabData[currentTab].contents}
       </section>
     </main>

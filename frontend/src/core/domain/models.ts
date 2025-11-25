@@ -32,3 +32,7 @@ export type BankEntry = {
   amountGco2eq: number;
 };
 
+export type BankRecord = {
+  balance: number;
+};
+

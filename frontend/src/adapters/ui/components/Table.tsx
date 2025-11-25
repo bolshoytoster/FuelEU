@@ -65,15 +65,13 @@ export const Table = <T,>({columns, resource}: Props<T>) => {
                 className="px-3 py-2 text-left text-sm font-semibold text-slate-700"
               >
                 {column.header}
-                {
-                  "filter" in column
-                    ? <input
-                      className="border"
-                      placeholder="filter"
-                      value={column.filter[0]}
-                      onChange={event => column.filter[1](event.target.value)}
-                    />
-                    : ""
+                {"filter" in column
+                  && <input
+                    className="border"
+                    placeholder="filter"
+                    value={column.filter[0]}
+                    onChange={event => column.filter[1](event.target.value)}
+                  />
                 }
               </th>
             ))}
