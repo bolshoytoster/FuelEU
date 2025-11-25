@@ -1,12 +1,12 @@
 import { buildHttpServer } from '../../adapters/inbound/http/httpServer';
 import {
   PostgresBankEntriesRepository,
+  PostgresBankingRepository,
   PostgresRoutesRepository,
-  PostgresShipComplianceRepository
 } from '../../adapters/outbound/postgres/repositories';
 import { ComparisonService } from '../../core/application/comparisonService';
 import { ListBankEntriesService } from '../../core/application/listBankEntriesService';
-import { ListComplianceService } from '../../core/application/listComplianceService';
+import { GetComplianceBalanceService } from '../../core/application/getComplianceBalanceService';
 import { ListRoutesService } from '../../core/application/listRoutesService';
 import { SetBaselineService } from '../../core/application/setBaselineService';
 import { createPostgresPool } from '../db/postgresClient';
@@ -27,8 +27,8 @@ export const startServer = async () => {
     new PostgresRoutesRepository(pool)
   );
 
-  const listComplianceService = new ListComplianceService(
-    new PostgresShipComplianceRepository(pool)
+  const getComplianceBalanceService = new GetComplianceBalanceService(
+    new PostgresBankingRepository(pool)
   );
 
   const listBankEntriesService = new ListBankEntriesService(
@@ -39,7 +39,7 @@ export const startServer = async () => {
     listRoutesService,
     setBaselineService,
     comparisonService,
-    listComplianceService,
+    getComplianceBalanceService,
     listBankEntriesService
   });
 

@@ -1,9 +1,9 @@
 import { Pool } from 'pg';
-import { BankEntry, Route, ShipCompliance } from '../../../core/domain/models';
+import { BankEntry, ComplianceBalance, Route } from '../../../core/domain/models';
 import {
   BankEntriesRepository,
+  BankingRepository,
   RoutesRepository,
-  ShipComplianceRepository
 } from '../../../core/ports/repositories';
 
 type RouteRow = {
@@ -18,13 +18,6 @@ type RouteRow = {
   distance: number;
   total_emissions: number;
   is_baseline: boolean;
-};
-
-type ShipComplianceRow = {
-  id: number;
-  ship_id: string;
-  year: number;
-  cb_gco2eq: number;
 };
 
 type BankEntryRow = {
@@ -66,23 +59,53 @@ export class PostgresRoutesRepository implements RoutesRepository {
   }
 }
 
-export class PostgresShipComplianceRepository
-  implements ShipComplianceRepository
+export class PostgresBankingRepository
+  implements BankingRepository
 {
   constructor(private readonly pool: Pool) {}
 
-  async listCompliance(): Promise<ShipCompliance[]> {
-    const query = `
-      SELECT id, ship_id, year, cb_gco2eq
-      FROM ship_compliance
-    `;
-    const { rows } = await this.pool.query<ShipComplianceRow>(query);
-    return rows.map((row) => ({
-      id: row.id,
-      shipId: row.ship_id,
-      year: row.year,
-      cbGco2eq: row.cb_gco2eq
-    }));
+  async getComplianceBalance(shipId: string, year: string): Promise<ComplianceBalance | undefined> {
+    const client = await this.pool.connect();
+
+    try {
+      await client.query('BEGIN');
+      // Check for an existing entry in ship_compliance
+      const { rows: rows1 } = await client.query<{ cb_gco2eq: number }>(
+        `SELECT cb_gco2eq FROM ship_compliance WHERE ship_id = $1 AND year = $2`,
+        [shipId, year]
+      );
+
+      // There should only ever be 0 or 1 results from this
+      if (rows1.length == 1)
+        return { balance: rows1[0].cb_gco2eq }
+
+
+      // If there's no existing entry, calculate one now
+
+      // I'm assuming here that routeId and shipId are equal. I'm not sure if this is true,
+      // but I can't see any other way to correlate the two
+      const { rows: rows2 } = await client.query<{ ghg_intensity: number; fuel_consumption: number }>(
+        `SELECT ghg_intensity, fuel_consumption FROM routes WHERE route_id = $1 AND year = $2`,
+        [shipId, year]
+      );
+
+      // There should only ever be 0 or 1 results from this
+      if (rows2.length != 1)
+        return;
+
+      // This formula is described in the specification document
+      const balance = (89.3368 - rows2[0].ghg_intensity) * rows2[0].fuel_consumption * 41_000;
+
+      await client.query(
+        `INSERT INTO ship_compliance (ship_id, year, cb_gco2eq) VALUES ($1, $2, $3)`,
+        [shipId, year, balance]
+      );
+
+      return { balance }
+    } finally {
+      await client.query('COMMIT');
+      client.release();
+    }
   }
 }
 

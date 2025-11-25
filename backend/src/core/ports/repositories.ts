@@ -1,12 +1,12 @@
-import { BankEntry, Route, ShipCompliance } from '../domain/models';
+import { BankEntry, ComplianceBalance, Route } from '../domain/models';
 
 export interface RoutesRepository {
   listRoutes(): Promise<Route[]>;
   setBaseline(routeId: string): Promise<undefined>;
 }
 
-export interface ShipComplianceRepository {
-  listCompliance(): Promise<ShipCompliance[]>;
+export interface BankingRepository {
+  getComplianceBalance(shipId: string, year: string): Promise<ComplianceBalance | undefined>;
 }
 
 export interface BankEntriesRepository {

@@ -75,13 +75,14 @@ fueleu=# INSERT INTO routes (route_id, vessel_type, fuel_type, year, ghg_intensi
     ('R004', 'RoRo'       , 'HFO', 2025, 89.2, 4900, 11800, 4300, FALSE),
     ('R005', 'Container'  , 'LNG', 2025, 90.5, 4950, 11900, 4400, FALSE);
 fueleu=# CREATE TABLE ship_compliance (
-    id INTEGER PRIMARY KEY,
+    id SMALLSERIAL PRIMARY KEY,
     ship_id TEXT,
     year INTEGER,
-    cb_gco2eq REAL
+    cb_gco2eq REAL,
+    UNIQUE (ship_id, year)
 );
 fueleu=# CREATE TABLE bank_entries (
-    id INTEGER PRIMARY KEY,
+    id SMALLSERIAL PRIMARY KEY,
     ship_id TEXT,
     year INTEGER,
     amount_gco2eq REAL

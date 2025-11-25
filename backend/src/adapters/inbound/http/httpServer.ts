@@ -1,7 +1,7 @@
 import express, { NextFunction, Request, Response } from 'express';
 import { ComparisonService } from '../../../core/application/comparisonService';
+import { GetComplianceBalanceService } from '../../../core/application/getComplianceBalanceService';
 import { ListBankEntriesService } from '../../../core/application/listBankEntriesService';
-import { ListComplianceService } from '../../../core/application/listComplianceService';
 import { ListRoutesService } from '../../../core/application/listRoutesService';
 import { SetBaselineService } from '../../../core/application/setBaselineService';
 
@@ -9,7 +9,7 @@ export interface HttpServerDependencies {
   listRoutesService: ListRoutesService;
   setBaselineService: SetBaselineService;
   comparisonService: ComparisonService;
-  listComplianceService: ListComplianceService;
+  getComplianceBalanceService: GetComplianceBalanceService;
   listBankEntriesService: ListBankEntriesService;
 }
 
@@ -27,7 +27,7 @@ export const buildHttpServer = ({
   listRoutesService,
   setBaselineService,
   comparisonService,
-  listComplianceService,
+  getComplianceBalanceService,
   listBankEntriesService
 }: HttpServerDependencies) => {
   const app = express();
@@ -58,10 +58,16 @@ export const buildHttpServer = ({
   );
 
   app.get(
-    '/compliance',
-    wrap(async (_req, res) => {
-      const compliance = await listComplianceService.execute();
-      res.json(compliance);
+    '/compliance/cb',
+    wrap(async (req, res) => {
+      if (typeof req.query.shipId == 'string' && typeof req.query.year == 'string') {
+        const compliance = await getComplianceBalanceService.execute(
+          req.query.shipId,
+          req.query.year
+        );
+        res.json(compliance);
+      } else
+        res.sendStatus(400);
     })
   );
 
