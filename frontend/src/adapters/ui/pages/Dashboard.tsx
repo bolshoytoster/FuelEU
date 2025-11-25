@@ -1,13 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { createDataApi } from '@adapters/infrastructure/api/dataApi';
 import { Table } from '@adapters/ui/components/Table';
 import { useResource } from '@adapters/ui/hooks/useResource';
 import { ComparisonUseCase } from '@core/application/comparison';
+import { CreatePoolUseCase } from '@core/application/createPool';
+import { ListComplianceUseCase } from '@core/application/listCompliance';
+import { ListPoolsUseCase } from '@core/application/listPools';
 import { ListRoutesUseCase } from '@core/application/listRoutes';
 import { GetBankRecordUseCase } from '@core/application/getBankRecord';
 import { GetBankHistoryUseCase } from '@core/application/getBankHistory';
-import { BankEntry, BankRecord } from '@core/domain/models';
+import { BankEntry, BankRecord, ShipCompliance } from '@core/domain/models';
 import { formatNumber } from '@shared/format';
 
 const dataApi = createDataApi();
@@ -15,6 +18,9 @@ const listRoutesUseCase = new ListRoutesUseCase(dataApi);
 const comparisonUseCase = new ComparisonUseCase(dataApi);
 const getBankRecordUseCase = new GetBankRecordUseCase(dataApi);
 const getBankHistoryUseCase = new GetBankHistoryUseCase(dataApi);
+const listComplianceUseCase = new ListComplianceUseCase(dataApi);
+const listPoolsUseCase = new ListPoolsUseCase(dataApi);
+const createPoolUseCase = new CreatePoolUseCase(dataApi);
 
 export const Dashboard = () => {
   const routesResource = useResource(
@@ -23,8 +29,69 @@ export const Dashboard = () => {
   const comparisonResource = useResource(
     comparisonUseCase.execute.bind(comparisonUseCase)
   );
+  const complianceResource = useResource(
+    listComplianceUseCase.execute.bind(listComplianceUseCase)
+  );
+  const poolsResource = useResource(
+    listPoolsUseCase.execute.bind(listPoolsUseCase)
+  );
 
+  const [selectedEntries, setSelectedEntries] = useState<Record<string, ShipCompliance>>({});
+  const [selectionError, setSelectionError] = useState<string>();
+  const [creationState, setCreationState] = useState<{ status: 'idle' | 'saving' | 'error' | 'success'; message?: string }>({
+    status: 'idle'
+  });
 
+  const selectedList = useMemo(
+    () => Object.values(selectedEntries),
+    [selectedEntries]
+  );
+  const poolingSelectedYear = selectedList[0]?.year;
+
+  const toggleSelection = (entry: ShipCompliance) => {
+    const key = `${entry.shipId}-${entry.year}`;
+    if (selectedEntries[key]) {
+      const { [key]: _removed, ...rest } = selectedEntries;
+      setSelectedEntries(rest);
+      setSelectionError(undefined);
+      return;
+    }
+
+    if (poolingSelectedYear !== undefined && poolingSelectedYear !== entry.year) {
+      setSelectionError('All ships in a pool must share the same year.');
+      return;
+    }
+
+    setSelectionError(undefined);
+    setSelectedEntries((prev) => ({
+      ...prev,
+      [key]: entry
+    }));
+  };
+
+  const handleCreatePool = async () => {
+    if (!selectedList.length || poolingSelectedYear === undefined)
+      return;
+
+    setCreationState({ status: 'saving' });
+    try {
+      await createPoolUseCase.execute(
+        poolingSelectedYear,
+        selectedList.map((entry) => entry.shipId)
+      );
+      setCreationState({
+        status: 'success',
+        message: `Pool created for ${poolingSelectedYear} with ${selectedList.length} ship(s).`
+      });
+      setSelectedEntries({});
+      poolsResource.refresh();
+    } catch (error) {
+      setCreationState({
+        status: 'error',
+        message: (error as Error).message
+      });
+    }
+  };
   // The route/year selected in the banking tab
   const [selectedRoute, setSelectedRoute] = useState("");
   const [selectedYear, setSelectedYear] = useState("");
@@ -381,6 +448,152 @@ export const Dashboard = () => {
               )}
             </>
           )}
+        </>
+      )
+    },
+    {
+      title: "Pooling",
+      contents: (
+        <>
+          <header className="space-y-2">
+            <h1 className="text-2xl font-semibold">Pooling</h1>
+            <p className="text-slate-600">
+              Select compliant ships from the same year to create a new pooling group.
+            </p>
+          </header>
+
+          {selectionError && (
+            <p className="text-sm text-red-600">{selectionError}</p>
+          )}
+
+          {creationState.status === 'error' && creationState.message && (
+            <p className="text-sm text-red-600">Failed to create pool: {creationState.message}</p>
+          )}
+          {creationState.status === 'success' && creationState.message && (
+            <p className="text-sm text-green-600">{creationState.message}</p>
+          )}
+
+          {complianceResource.error && (
+            <p className="text-sm text-red-600">
+              Failed to load compliance data: {complianceResource.error}
+            </p>
+          )}
+
+          {!complianceResource.data && complianceResource.loading && (
+            <p className="text-sm text-slate-500 animate-pulse">Loading ships…</p>
+          )}
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-100">
+              <thead>
+                <tr>
+                  <th className="px-3 py-2 text-left text-sm font-semibold text-slate-700">Select</th>
+                  <th className="px-3 py-2 text-left text-sm font-semibold text-slate-700">Ship</th>
+                  <th className="px-3 py-2 text-left text-sm font-semibold text-slate-700">Year</th>
+                  <th className="px-3 py-2 text-left text-sm font-semibold text-slate-700">Compliance (gCO₂e)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {complianceResource.data?.map((entry) => {
+                  const key = `${entry.shipId}-${entry.year}`;
+                  const checked = Boolean(selectedEntries[key]);
+                  return (
+                    <tr key={key} className={checked ? 'bg-cyan-50' : undefined}>
+                      <td className="px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleSelection(entry)}
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-sm">{entry.shipId}</td>
+                      <td className="px-3 py-2 text-sm">{entry.year}</td>
+                      <td className="px-3 py-2 text-sm">{formatNumber(entry.cbGco2eq)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <button
+            type="button"
+            className="rounded-2xl border bg-cyan-100 px-4 py-2 disabled:opacity-50"
+            disabled={!selectedList.length || creationState.status === 'saving'}
+            onClick={handleCreatePool}
+          >
+            {creationState.status === 'saving' ? 'Creating Pool…' : 'Create Pool'}
+          </button>
+
+          <header className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Existing Pools</h2>
+              <p className="text-sm text-slate-600">Most recent pools appear first.</p>
+            </div>
+            <button
+              type="button"
+              className="rounded-xl border px-3 py-1 text-sm"
+              onClick={poolsResource.refresh}
+            >
+              Refresh
+            </button>
+          </header>
+
+          {!poolsResource.data && poolsResource.loading && (
+            <p className="text-sm text-slate-500 animate-pulse">Loading pools…</p>
+          )}
+
+          {poolsResource.error && (
+            <p className="text-sm text-red-600">
+              Failed to load pools: {poolsResource.error}
+            </p>
+          )}
+
+          {poolsResource.data && poolsResource.data.length === 0 && (
+            <p className="text-sm text-slate-500">No pools have been created yet.</p>
+          )}
+
+          {poolsResource.data?.map((pool) => (
+            <div key={pool.id} className="rounded-xl border p-4 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="font-semibold">Pool #{pool.id}</p>
+                  <p className="text-sm text-slate-600">
+                    Year {pool.year} • Created {new Date(pool.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                <span className="text-sm text-slate-600">
+                  {pool.members.length} member{pool.members.length === 1 ? '' : 's'}
+                </span>
+              </div>
+              {pool.members.length > 0 ? (
+                <Table
+                  resource={{
+                    data: pool.members,
+                    loading: false,
+                    error: undefined,
+                    refresh: poolsResource.refresh
+                  }}
+                  columns={[
+                    {
+                      header: 'Ship',
+                      render: (member) => member.shipId
+                    },
+                    {
+                      header: 'CB Before',
+                      render: (member) => formatNumber(member.cbBefore)
+                    },
+                    {
+                      header: 'CB After',
+                      render: (member) => formatNumber(member.cbAfter)
+                    }
+                  ]}
+                />
+              ) : (
+                <p className="text-sm text-slate-500">No members recorded.</p>
+              )}
+            </div>
+          ))}
         </>
       )
     }

@@ -36,3 +36,20 @@ export type BankRecord = {
   balance: number;
 };
 
+export type Pool = {
+  id: number;
+  year: number;
+  createdAt: string;
+};
+
+export type PoolMember = {
+  poolId: number;
+  shipId: string;
+  cbBefore: number;
+  cbAfter: number;
+};
+
+export type PoolWithMembers = Pool & {
+  members: PoolMember[];
+};
+

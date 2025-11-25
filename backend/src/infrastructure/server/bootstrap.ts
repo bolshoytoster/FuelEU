@@ -2,14 +2,18 @@ import { buildHttpServer } from '../../adapters/inbound/http/httpServer';
 import {
   PostgresBankEntriesRepository,
   PostgresBankingRepository,
+  PostgresPoolsRepository,
   PostgresRoutesRepository,
 } from '../../adapters/outbound/postgres/repositories';
 import { ApplyBankedSurplusService } from '../../core/application/applyBankedSurplusService';
 import { BankSurplusService } from '../../core/application/bankSurplusService';
 import { ComparisonService } from '../../core/application/comparisonService';
+import { CreatePoolService } from '../../core/application/createPoolService';
 import { GetComplianceBalanceService } from '../../core/application/getComplianceBalanceService';
 import { ListBankEntriesService } from '../../core/application/listBankEntriesService';
 import { ListBankHistoryService } from '../../core/application/listBankHistoryService';
+import { ListComplianceService } from '../../core/application/listComplianceService';
+import { ListPoolsService } from '../../core/application/listPoolsService';
 import { ListRoutesService } from '../../core/application/listRoutesService';
 import { SetBaselineService } from '../../core/application/setBaselineService';
 import { createPostgresPool } from '../db/postgresClient';
@@ -20,6 +24,8 @@ export const startServer = async () => {
 
   const routesRepository = new PostgresRoutesRepository(pool);
   const bankingRepository = new PostgresBankingRepository(pool);
+  const bankEntriesRepository = new PostgresBankEntriesRepository(pool);
+  const poolsRepository = new PostgresPoolsRepository(pool);
 
   const listRoutesService = new ListRoutesService(routesRepository);
 
@@ -28,6 +34,10 @@ export const startServer = async () => {
   const comparisonService = new ComparisonService(routesRepository);
 
   const getComplianceBalanceService = new GetComplianceBalanceService(
+    bankingRepository
+  );
+
+  const listComplianceService = new ListComplianceService(
     bankingRepository
   );
 
@@ -40,11 +50,19 @@ export const startServer = async () => {
   );
 
   const listBankEntriesService = new ListBankEntriesService(
-    new PostgresBankEntriesRepository(pool)
+    bankEntriesRepository
   );
 
   const listBankHistoryService = new ListBankHistoryService(
-    new PostgresBankEntriesRepository(pool)
+    bankEntriesRepository
+  );
+
+  const listPoolsService = new ListPoolsService(
+    poolsRepository
+  );
+
+  const createPoolService = new CreatePoolService(
+    poolsRepository
   );
 
   const app = buildHttpServer({
@@ -55,7 +73,10 @@ export const startServer = async () => {
     listBankEntriesService,
     bankSurplusService,
     applyBankedSurplusService,
-    listBankHistoryService
+    listBankHistoryService,
+    listPoolsService,
+    createPoolService,
+    listComplianceService
   });
 
   return new Promise<void>((resolve, reject) => {

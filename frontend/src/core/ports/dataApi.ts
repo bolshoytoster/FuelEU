@@ -1,4 +1,4 @@
-import { BankEntry, BankRecord, Comparison, Route, ShipCompliance } from '../domain/models';
+import { BankEntry, BankRecord, Comparison, PoolWithMembers, Route, ShipCompliance } from '../domain/models';
 
 export interface DataApiPort {
   getRoutes(): Promise<Route[]>;
@@ -9,5 +9,7 @@ export interface DataApiPort {
   bankSurplus(shipId: string, year: string): Promise<BankRecord | undefined>;
   applyBankedSurplus(shipId: string, year: string): Promise<BankRecord | undefined>;
   getBankHistory(shipId: string): Promise<BankEntry[]>;
+  getPools(): Promise<PoolWithMembers[]>;
+  createPool(year: number, shipIds: string[]): Promise<PoolWithMembers>;
 }
 

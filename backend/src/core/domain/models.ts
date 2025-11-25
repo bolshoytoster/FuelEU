@@ -18,6 +18,13 @@ export interface Comparison {
   compliant: boolean;
 };
 
+export interface ShipCompliance {
+  id: number;
+  shipId: string;
+  year: number;
+  cbGco2eq: number;
+}
+
 export interface ComplianceBalance {
   balance: number;
 }
@@ -40,5 +47,9 @@ export interface PoolMember {
   shipId: string;
   cbBefore: number;
   cbAfter: number;
+}
+
+export interface PoolWithMembers extends Pool {
+  members: PoolMember[];
 }
 

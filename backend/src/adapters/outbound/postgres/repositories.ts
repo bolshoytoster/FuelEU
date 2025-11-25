@@ -1,8 +1,9 @@
 import { Pool } from 'pg';
-import { BankEntry, ComplianceBalance, Route } from '../../../core/domain/models';
+import { BankEntry, ComplianceBalance, PoolMember, PoolWithMembers, Route, ShipCompliance } from '../../../core/domain/models';
 import {
   BankEntriesRepository,
   BankingRepository,
+  PoolsRepository,
   RoutesRepository,
 } from '../../../core/ports/repositories';
 
@@ -25,6 +26,15 @@ type BankEntryRow = {
   ship_id: string;
   year: number;
   amount_gco2eq: number;
+};
+
+type PoolRow = {
+  id: number;
+  year: number;
+  created_at: Date;
+  ship_id: string | null;
+  cb_before: number | null;
+  cb_after: number | null;
 };
 
 export class PostgresRoutesRepository implements RoutesRepository {
@@ -189,6 +199,21 @@ export class PostgresBankingRepository
 
     return this.getComplianceBalance(shipId, year);
   }
+
+  async listCompliance(): Promise<ShipCompliance[]> {
+    const { rows } = await this.pool.query<{ id: number; ship_id: string; year: number; cb_gco2eq: number }>(
+      `SELECT id, ship_id, year, cb_gco2eq
+      FROM ship_compliance
+      ORDER BY year DESC, ship_id ASC`
+    );
+
+    return rows.map((row) => ({
+      id: row.id,
+      shipId: row.ship_id,
+      year: row.year,
+      cbGco2eq: row.cb_gco2eq
+    }));
+  }
 }
 
 export class PostgresBankEntriesRepository
@@ -224,6 +249,112 @@ export class PostgresBankEntriesRepository
       year: row.year,
       amountGco2eq: row.amount_gco2eq
     }));
+  }
+}
+
+export class PostgresPoolsRepository
+  implements PoolsRepository
+{
+  constructor(private readonly pool: Pool) {}
+
+  async listPools(): Promise<PoolWithMembers[]> {
+    const query = `
+      SELECT
+        p.id,
+        p.year,
+        p.created_at,
+        pm.ship_id,
+        pm.cb_before,
+        pm.cb_after
+      FROM pools p
+      LEFT JOIN pool_members pm ON pm.pool_id = p.id
+      ORDER BY p.created_at DESC, pm.ship_id ASC
+    `;
+    const { rows } = await this.pool.query<PoolRow>(query);
+
+    const pools = new Map<number, PoolWithMembers>();
+    for (const row of rows) {
+      let pool = pools.get(row.id);
+      if (!pool) {
+        pool = {
+          id: row.id,
+          year: row.year,
+          createdAt: row.created_at,
+          members: []
+        };
+        pools.set(row.id, pool);
+      }
+
+      if (row.ship_id) {
+        pool.members.push({
+          poolId: row.id,
+          shipId: row.ship_id,
+          cbBefore: row.cb_before ?? 0,
+          cbAfter: row.cb_after ?? 0
+        });
+      }
+    }
+
+    return Array.from(pools.values());
+  }
+
+  async createPool(year: number, shipIds: string[]): Promise<PoolWithMembers> {
+    if (!shipIds.length)
+      throw new Error('Cannot create a pool without ships');
+
+    const uniqueShipIds = [...new Set(shipIds)];
+    const client = await this.pool.connect();
+
+    try {
+      await client.query('BEGIN');
+      const { rows } = await client.query<{ id: number; year: number; created_at: Date }>(
+        `INSERT INTO pools (year, created_at) VALUES ($1, NOW())
+        RETURNING id, year, created_at`,
+        [year]
+      );
+      const poolRow = rows[0];
+      const members: PoolMember[] = [];
+
+      for (const shipId of uniqueShipIds) {
+        const { rows: complianceRows } = await client.query<{ cb_gco2eq: number }>(
+          `SELECT cb_gco2eq FROM ship_compliance WHERE ship_id = $1 AND year = $2`,
+          [shipId, year]
+        );
+
+        if (!complianceRows.length) {
+          throw new Error(`No compliance record for ship ${shipId} in ${year}`);
+        }
+
+        const cbBefore = complianceRows[0].cb_gco2eq;
+
+        await client.query(
+          `INSERT INTO pool_members (pool_id, ship_id, cb_before, cb_after)
+          VALUES ($1, $2, $3, $4)`,
+          [poolRow.id, shipId, cbBefore, cbBefore]
+        );
+
+        members.push({
+          poolId: poolRow.id,
+          shipId,
+          cbBefore,
+          cbAfter: cbBefore
+        });
+      }
+
+      await client.query('COMMIT');
+
+      return {
+        id: poolRow.id,
+        year: poolRow.year,
+        createdAt: poolRow.created_at,
+        members
+      };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }
 

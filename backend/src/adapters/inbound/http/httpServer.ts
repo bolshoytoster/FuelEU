@@ -2,9 +2,12 @@ import express, { NextFunction, Request, Response } from 'express';
 import { ApplyBankedSurplusService } from '../../../core/application/applyBankedSurplusService';
 import { BankSurplusService } from '../../../core/application/bankSurplusService';
 import { ComparisonService } from '../../../core/application/comparisonService';
+import { CreatePoolService } from '../../../core/application/createPoolService';
 import { GetComplianceBalanceService } from '../../../core/application/getComplianceBalanceService';
 import { ListBankEntriesService } from '../../../core/application/listBankEntriesService';
 import { ListBankHistoryService } from '../../../core/application/listBankHistoryService';
+import { ListComplianceService } from '../../../core/application/listComplianceService';
+import { ListPoolsService } from '../../../core/application/listPoolsService';
 import { ListRoutesService } from '../../../core/application/listRoutesService';
 import { SetBaselineService } from '../../../core/application/setBaselineService';
 
@@ -17,6 +20,9 @@ export interface HttpServerDependencies {
   bankSurplusService: BankSurplusService;
   applyBankedSurplusService: ApplyBankedSurplusService;
   listBankHistoryService: ListBankHistoryService;
+  listPoolsService: ListPoolsService;
+  createPoolService: CreatePoolService;
+  listComplianceService: ListComplianceService;
 }
 
 type AsyncHandler = (
@@ -37,7 +43,10 @@ export const buildHttpServer = ({
   listBankEntriesService,
   bankSurplusService,
   applyBankedSurplusService,
-  listBankHistoryService
+  listBankHistoryService,
+  listPoolsService,
+  createPoolService,
+  listComplianceService
 }: HttpServerDependencies) => {
   const app = express();
   app.disable('x-powered-by');
@@ -78,6 +87,14 @@ export const buildHttpServer = ({
         res.json(compliance);
       } else
         res.sendStatus(400);
+    })
+  );
+
+  app.get(
+    '/compliance',
+    wrap(async (_req, res) => {
+      const compliance = await listComplianceService.execute();
+      res.json(compliance);
     })
   );
 
@@ -137,6 +154,33 @@ export const buildHttpServer = ({
 
       const entries = await listBankHistoryService.execute(req.query.shipId);
       res.json(entries);
+    })
+  );
+
+  app.get(
+    '/pools',
+    wrap(async (_req, res) => {
+      const pools = await listPoolsService.execute();
+      res.json(pools);
+    })
+  );
+
+  app.post(
+    '/pools',
+    wrap(async (req, res) => {
+      const { year, shipIds } = req.body ?? {};
+      if (
+        typeof year !== 'number' ||
+        !Array.isArray(shipIds) ||
+        shipIds.length === 0 ||
+        shipIds.some((id) => typeof id !== 'string')
+      ) {
+        res.sendStatus(400);
+        return;
+      }
+
+      const pool = await createPoolService.execute(year, shipIds);
+      res.json(pool);
     })
   );
 
