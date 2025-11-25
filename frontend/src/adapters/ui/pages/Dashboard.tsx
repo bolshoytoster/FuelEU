@@ -603,12 +603,12 @@ export const Dashboard = () => {
 
   return (
     <main className="mx-auto max-w-5xl gap-6 p-6">
-      <div className="flex flex-row justify-evenly">
+      <div className="flex flex-row justify-evenly overflow-x-auto">
         {tabData.map((tab, index) => (
           <button
             key={index}
             onClick={() => setCurrentTab(index)}
-            className={"rounded-2xl border p-4 m-4 " + (currentTab == index ? "bg-cyan-100" : "bg-white")}>
+            className={"rounded-2xl border p-4 m-4 " + (currentTab == index ? "bg-cyan-50" : "bg-white")}>
             {tab.title}
           </button>
         ))}
