@@ -1,5 +1,5 @@
 import { apiConfig } from '@shared/config';
-import { BankRecord, Comparison, Route, ShipCompliance } from '@core/domain/models';
+import { BankEntry, BankRecord, Comparison, Route, ShipCompliance } from '@core/domain/models';
 import { DataApiPort } from '@core/ports/dataApi';
 
 const httpGet = async <T>(path: string): Promise<T> => {
@@ -45,6 +45,7 @@ export const createDataApi = (): DataApiPort => ({
   getCompliance: () => httpGet<ShipCompliance[]>('/compliance'),
   getBankRecord: (shipId, year) => httpGet<BankRecord | undefined>(`/compliance/cb?shipId=${shipId}&year=${year}`),
   bankSurplus: (shipId, year) => httpPost<BankRecord | undefined>('/banking/bank', { shipId, year }),
-  applyBankedSurplus: (shipId, year) => httpPost<BankRecord | undefined>('/banking/apply', { shipId, year })
+  applyBankedSurplus: (shipId, year) => httpPost<BankRecord | undefined>('/banking/apply', { shipId, year }),
+  getBankHistory: (shipId) => httpGet<BankEntry[]>(`/banking/history?shipId=${encodeURIComponent(shipId)}`)
 });
 

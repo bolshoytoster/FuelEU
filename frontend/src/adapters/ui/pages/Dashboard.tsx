@@ -6,13 +6,15 @@ import { useResource } from '@adapters/ui/hooks/useResource';
 import { ComparisonUseCase } from '@core/application/comparison';
 import { ListRoutesUseCase } from '@core/application/listRoutes';
 import { GetBankRecordUseCase } from '@core/application/getBankRecord';
-import { BankRecord } from '@core/domain/models';
+import { GetBankHistoryUseCase } from '@core/application/getBankHistory';
+import { BankEntry, BankRecord } from '@core/domain/models';
 import { formatNumber } from '@shared/format';
 
 const dataApi = createDataApi();
 const listRoutesUseCase = new ListRoutesUseCase(dataApi);
 const comparisonUseCase = new ComparisonUseCase(dataApi);
 const getBankRecordUseCase = new GetBankRecordUseCase(dataApi);
+const getBankHistoryUseCase = new GetBankHistoryUseCase(dataApi);
 
 export const Dashboard = () => {
   const routesResource = useResource(
@@ -32,6 +34,11 @@ export const Dashboard = () => {
     status: 'idle' | 'loading' | 'success' | 'error';
   }>({ status: 'idle' });
   const [bankingAction, setBankingAction] = useState<'bank' | 'apply'>();
+  const [bankHistoryState, setBankHistoryState] = useState<{
+    data?: BankEntry[];
+    error?: string;
+    loading: boolean;
+  }>({ loading: false });
 
   const selectableRoutes = new Set<string>();
   const selectableYears = new Set<number>();
@@ -82,6 +89,52 @@ export const Dashboard = () => {
     };
   }, [selectedRoute, selectedYear]);
 
+  const fetchBankHistory = (shipId: string, shouldAbort?: () => boolean) => {
+    setBankHistoryState((prev) => ({
+      ...prev,
+      error: undefined,
+      loading: true
+    }));
+
+    getBankHistoryUseCase
+      .execute(shipId)
+      .then((entries) => {
+        if (shouldAbort?.())
+          return;
+        setBankHistoryState({
+          data: entries,
+          loading: false
+        });
+      })
+      .catch((error: Error) => {
+        if (shouldAbort?.())
+          return;
+        setBankHistoryState({
+          error: error.message,
+          loading: false
+        });
+      });
+  };
+
+  useEffect(() => {
+    if (!selectedRoute) {
+      setBankHistoryState({ data: [], loading: false });
+      return;
+    }
+
+    let cancelled = false;
+    fetchBankHistory(selectedRoute, () => cancelled);
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedRoute]);
+
+  const refreshBankHistory = () => {
+    if (!selectedRoute)
+      return;
+    fetchBankHistory(selectedRoute);
+  };
+
   const handleBankingAction = async (action: 'bank' | 'apply') => {
     if (!selectedRoute || !selectedYear)
       return;
@@ -110,6 +163,7 @@ export const Dashboard = () => {
           status: 'success'
         });
       }
+      refreshBankHistory();
     } catch (error) {
       setBankRecordState({
         error: (error as Error).message,
@@ -296,6 +350,29 @@ export const Dashboard = () => {
                     >
                       {bankingAction === 'apply' ? 'Applying…' : 'Apply Banked Surplus'}
                     </button>
+                  )}
+                  {selectedRoute && (
+                    <div className="mt-6">
+                      <h3 className="text-lg font-semibold mb-2">Bank History</h3>
+                      <Table
+                        resource={{
+                          data: bankHistoryState.data,
+                          error: bankHistoryState.error,
+                          loading: bankHistoryState.loading,
+                          refresh: refreshBankHistory
+                        }}
+                        columns={[
+                          {
+                            header: "Year",
+                            render: entry => entry.year
+                          },
+                          {
+                            header: "Amount (gCO₂e)",
+                            render: entry => formatNumber(entry.amountGco2eq)
+                          }
+                        ]}
+                      />
+                    </div>
                   )}
                 </>
               )}

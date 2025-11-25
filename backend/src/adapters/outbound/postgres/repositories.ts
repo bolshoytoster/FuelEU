@@ -209,5 +209,21 @@ export class PostgresBankEntriesRepository
       amountGco2eq: row.amount_gco2eq
     }));
   }
+
+  async listEntriesByShip(shipId: string): Promise<BankEntry[]> {
+    const query = `
+      SELECT id, ship_id, year, amount_gco2eq
+      FROM bank_entries
+      WHERE ship_id = $1
+      ORDER BY year DESC, id DESC
+    `;
+    const { rows } = await this.pool.query<BankEntryRow>(query, [shipId]);
+    return rows.map((row) => ({
+      id: row.id,
+      shipId: row.ship_id,
+      year: row.year,
+      amountGco2eq: row.amount_gco2eq
+    }));
+  }
 }
 

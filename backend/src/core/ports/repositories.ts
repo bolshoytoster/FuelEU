@@ -13,5 +13,6 @@ export interface BankingRepository {
 
 export interface BankEntriesRepository {
   listEntries(): Promise<BankEntry[]>;
+  listEntriesByShip(shipId: string): Promise<BankEntry[]>;
 }
 

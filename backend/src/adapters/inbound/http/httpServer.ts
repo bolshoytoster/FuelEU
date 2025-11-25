@@ -4,6 +4,7 @@ import { BankSurplusService } from '../../../core/application/bankSurplusService
 import { ComparisonService } from '../../../core/application/comparisonService';
 import { GetComplianceBalanceService } from '../../../core/application/getComplianceBalanceService';
 import { ListBankEntriesService } from '../../../core/application/listBankEntriesService';
+import { ListBankHistoryService } from '../../../core/application/listBankHistoryService';
 import { ListRoutesService } from '../../../core/application/listRoutesService';
 import { SetBaselineService } from '../../../core/application/setBaselineService';
 
@@ -15,6 +16,7 @@ export interface HttpServerDependencies {
   listBankEntriesService: ListBankEntriesService;
   bankSurplusService: BankSurplusService;
   applyBankedSurplusService: ApplyBankedSurplusService;
+  listBankHistoryService: ListBankHistoryService;
 }
 
 type AsyncHandler = (
@@ -34,7 +36,8 @@ export const buildHttpServer = ({
   getComplianceBalanceService,
   listBankEntriesService,
   bankSurplusService,
-  applyBankedSurplusService
+  applyBankedSurplusService,
+  listBankHistoryService
 }: HttpServerDependencies) => {
   const app = express();
   app.disable('x-powered-by');
@@ -121,6 +124,19 @@ export const buildHttpServer = ({
       }
 
       res.json(result);
+    })
+  );
+
+  app.get(
+    '/banking/history',
+    wrap(async (req, res) => {
+      if (typeof req.query.shipId !== 'string') {
+        res.sendStatus(400);
+        return;
+      }
+
+      const entries = await listBankHistoryService.execute(req.query.shipId);
+      res.json(entries);
     })
   );
 

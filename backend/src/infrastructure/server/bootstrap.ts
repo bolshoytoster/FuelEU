@@ -9,6 +9,7 @@ import { BankSurplusService } from '../../core/application/bankSurplusService';
 import { ComparisonService } from '../../core/application/comparisonService';
 import { GetComplianceBalanceService } from '../../core/application/getComplianceBalanceService';
 import { ListBankEntriesService } from '../../core/application/listBankEntriesService';
+import { ListBankHistoryService } from '../../core/application/listBankHistoryService';
 import { ListRoutesService } from '../../core/application/listRoutesService';
 import { SetBaselineService } from '../../core/application/setBaselineService';
 import { createPostgresPool } from '../db/postgresClient';
@@ -42,6 +43,10 @@ export const startServer = async () => {
     new PostgresBankEntriesRepository(pool)
   );
 
+  const listBankHistoryService = new ListBankHistoryService(
+    new PostgresBankEntriesRepository(pool)
+  );
+
   const app = buildHttpServer({
     listRoutesService,
     setBaselineService,
@@ -49,7 +54,8 @@ export const startServer = async () => {
     getComplianceBalanceService,
     listBankEntriesService,
     bankSurplusService,
-    applyBankedSurplusService
+    applyBankedSurplusService,
+    listBankHistoryService
   });
 
   return new Promise<void>((resolve, reject) => {
